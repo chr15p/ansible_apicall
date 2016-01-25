@@ -1,0 +1,85 @@
+---
+- name: Satellite Setup
+  hosts: satellite2.chrisprocter.co.uk
+  gather_facts: false
+  tasks:
+    - name: chrisprocter_org
+      apicall: name=chrisprocter.co.uk api=organizations state=enabled
+      register: chrisprocter
+
+    #- name: testloc
+    #  apicall: name=testloc description="my test location" api="locations"
+
+    - name: sat6
+      apicall: api=locations name=sat6
+      register: location
+
+    - name: chrisprocter.co.uk
+      apicall: api=domains name=chrisprocter.co.uk  
+      register: domain
+
+
+    - name: testsubnet
+      apicall: 
+        api: subnets
+        name: "home"
+        network: 192.168.1.0
+        mask: 255.255.255.0
+        gateway: 192.168.1.1
+        dns_primary: 192.168.2.1
+        organization_ids: 
+          - "{{chrisprocter.id}}"
+        tftp_id: 1
+        domain_ids:
+          - "{{domain.id}}"
+        location_ids:
+          - "{{location.id}}"
+      register: subnet
+
+
+    - name: x86_64-arch
+      apicall: api=architectures name="x86_64"
+
+
+    - name: Library_id
+      apicall: api=lifecycle_environments method=index name=Library
+      register: libraryId
+
+
+    - name: library
+      apicall: api=lifecycle_environments organization_id=chrisprocter name=prod prior_id=libraryId
+
+
+    - include: repository.yaml
+      vars:
+        product_name: "Red Hat Enterprise Linux Server"
+        org_id: "{{chrisprocter.id}}"
+        repository_set_name: "Red Hat Satellite Tools 6.1 (for RHEL 7 Server) (RPMs)"
+        repository_name: "Red Hat Satellite Tools 6.1 for RHEL 7 Server RPMs x86_64"
+        basearch:  "x86_64"
+        releasever: ""
+
+    - include: repository.yaml
+      vars:
+        product_name: "Red Hat Enterprise Linux Server"
+        org_id: "{{chrisprocter.id}}"
+        repository_set_name: "Red Hat Enterprise Linux 7 Server (RPMs)"
+        repository_name: "Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server"
+        basearch:  "x86_64"
+        releasever: "7Server"
+
+    - name: syncplan
+      apicall: api=sync_plans organization_id=chrisprocter name=daily interval=daily enabled=true sync_date="2016-01-01T22:00:00Z"
+
+    - name: libvirt
+      apicall: 
+        api: compute_resources
+        method: create
+        compute_resource:
+          - name: throrium
+            provider:  Libvirt
+            url: "qemu+ssh://root@192.168.122.1/system"
+            set_console_password: false
+
+
+
