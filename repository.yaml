@@ -1,0 +1,26 @@
+---
+
+#product_name
+#org_id
+#repository_set_name
+#repository_name
+#basearch
+#releasever
+
+    - name: "{{product_name}}"
+      apicall: api=products method="index" name="{{product_name}}" organization_id={{org_id}}
+      register: X_repo_product
+
+    - name: "{{repository_set_name}}"
+      apicall: api=repository_sets method="index" product_id={{X_repo_product.id}} name="{{repository_set_name}}"
+      register: X_repository_set
+
+    - name: "{{repository_name}}"
+      apicall:
+        api: repository_sets
+        method: enable
+        name: "{{repository_name}}"
+        product_id: "{{X_repo_product.result.id}}"
+        id:  "{{X_repository_set.id}}"
+        basearch: "{{basearch}}"
+        releasever: "{{releasever}}"
